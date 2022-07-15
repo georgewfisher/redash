@@ -340,6 +340,7 @@ ACCESS_CONTROL_ALLOW_HEADERS = os.environ.get(
 # Query Runners
 default_query_runners = [
     "redash.query_runner.athena",
+    "redash.query_runner.azure_trino",
     "redash.query_runner.big_query",
     "redash.query_runner.google_spreadsheets",
     "redash.query_runner.graphite",
