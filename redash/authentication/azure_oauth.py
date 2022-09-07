@@ -52,8 +52,6 @@ def create_azure_oauth_blueprint(app):
     def get_user_profile(access_token):
         headers = {"Authorization": "Bearer {}".format(access_token)}
 
-        logger.debug("Graph call =" + access_token + "=")
-
         response = requests.get(
             "https://graph.microsoft.com/oidc/userinfo", headers=headers
         )
@@ -93,6 +91,10 @@ def create_azure_oauth_blueprint(app):
         user = resp.get("userinfo")
         if user:
             session["user"] = user
+
+        print("Hello World")
+        print(resp)
+        print(resp.get("aud"))
 
         access_token = resp["access_token"]
 

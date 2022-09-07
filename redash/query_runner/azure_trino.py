@@ -72,7 +72,7 @@ class AzureTrino(BaseQueryRunner):
                 },
                 "azure_ad_client_id": {
                     "type": "string",
-                    "title": "Azure AD Client ID (required if not using MSI)"
+                    "title": "Azure AD Client ID (required for application auth, optional for MSI)"
                 },
                 "azure_ad_client_secret": {
                     "type": "string",
@@ -140,7 +140,10 @@ class AzureTrino(BaseQueryRunner):
         azure_trino_scope = 'https://hilo.azurehdinsight.net/.default'
 
         if self.configuration.get("use_msi") == True:
-            credential = DefaultAzureCredential()
+            if not self.configuration.get("azure_ad_client_id"):
+                credential = DefaultAzureCredential()
+            else:
+                credential = DefaultAzureCredential(managed_identity_client_id=self.configuration.get("azure_ad_client_id"))
         else:
             credential = ClientSecretCredential(self.configuration.get("azure_ad_tenant_id"), self.configuration.get("azure_ad_client_id"), self.configuration.get("azure_ad_client_secret"))
         
