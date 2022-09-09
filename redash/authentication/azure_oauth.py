@@ -1,5 +1,7 @@
 import logging
 import requests
+import base64
+import json
 from flask import redirect, url_for, Blueprint, flash, request, session
 
 
@@ -107,6 +109,21 @@ def create_azure_oauth_blueprint(app):
         if profile is None:
             flash("Validation error. Please retry.")
             return redirect(url_for("redash.login"))
+
+        decoded_token_json = json.loads(base64.b64decode(access_token))
+        if permitted_role:
+            is_valid = False
+            if "roles" in decoded_token_json:
+                roles_str = decoded_token_json["roles"]
+                roles = roles_str.split()
+                for permitted_role in permitted_roles:
+                    if permitted_role in roles:
+                        is_valid = True
+
+            if not is_valid:
+                logger.warning("Access token does not contain required roles: " + permitted_roles)
+                flash("User is not a required role.")
+                return redirect(url_for("redash.login"))
 
         if "org_slug" in session:
             org = models.Organization.get_by_slug(session.pop("org_slug"))
