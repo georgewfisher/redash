@@ -59,6 +59,33 @@ def show_azure_apps_domains():
         )
     )
 
+
+@manager.command()
+@argument("roles")
+def set_azure_roles(roles):
+    """
+    Sets the allowable roles to the comma separated list ROLES.
+    """
+    organization = models.Organization.query.first()
+    k = models.Organization.SETTING_AZURE_ROLES
+    organization.settings[k] = roles.split(",")
+    models.db.session.add(organization)
+    models.db.session.commit()
+    print(
+        "Updated list of allowed roles to: {}".format(
+            organization.azure_roles
+        )
+    )
+
+@manager.command()
+def show_azure_roles():
+    organization = models.Organization.query.first()
+    print(
+        "Current list of Azure roles: {}".format(
+            ", ".join(organization.azure_roles)
+        )
+    )
+
 @manager.command(name="list")
 def list_command():
     """List all organizations"""

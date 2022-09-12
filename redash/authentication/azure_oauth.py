@@ -31,10 +31,31 @@ def verify_profile(org, profile):
 
     return False
 
+def get_roles_in_id_token(id_token, logger):
+    logger.debug("Validating ID token")
+    id_token_parts = id_token.split(".")
+    if len(id_token_parts) < 2:
+        logger.warning("Malformed ID token")
+    decoded_token_json = json.loads(base64.b64decode(id_token_payload[1] + '=='))
+    logger.debug("Successfully decoded token")
+    if "roles" in decoded_token_json:
+        roles = decoded_token_json["roles"]
+        logger.debug("Found roles: " + roles)
+        return roles
+    return []
+
+def verify_roles(org, roles, logger):
+    if org.azure_roles:
+        if not roles:
+            return False
+        for azure_role in org.azure_roles:
+            logger.debug("Verifying role: " + azure_role)
+            if azure_role in roles:
+                logger.debug("Role verified: " + azure_role)
+                return True
+    return False
 
 def create_azure_oauth_blueprint(app):
-    oauth = OAuth(app)
-
     logger = logging.getLogger("azure_oauth")
     blueprint = Blueprint("azure_oauth", __name__)
 
@@ -94,41 +115,45 @@ def create_azure_oauth_blueprint(app):
         if user:
             session["user"] = user
 
-        print("Hello World")
-        print(resp)
-        print(resp.get("aud"))
-
         access_token = resp["access_token"]
+        id_token = resp["id_token"]
 
         if access_token is None:
             logger.warning("Access token missing in call back request.")
             flash("Validation error. Please retry.")
             return redirect(url_for("redash.login"))
 
-        profile = get_user_profile(access_token)
-        if profile is None:
+        if id_token is None:
+            logger.warning("Id token missing in call back request.")
             flash("Validation error. Please retry.")
             return redirect(url_for("redash.login"))
-
-        decoded_token_json = json.loads(base64.b64decode(access_token))
-        if permitted_role:
-            is_valid = False
-            if "roles" in decoded_token_json:
-                roles_str = decoded_token_json["roles"]
-                roles = roles_str.split()
-                for permitted_role in permitted_roles:
-                    if permitted_role in roles:
-                        is_valid = True
-
-            if not is_valid:
-                logger.warning("Access token does not contain required roles: " + permitted_roles)
-                flash("User is not a required role.")
-                return redirect(url_for("redash.login"))
 
         if "org_slug" in session:
             org = models.Organization.get_by_slug(session.pop("org_slug"))
         else:
             org = current_org
+
+        profile = get_user_profile(access_token)
+
+        if org.azure_roles:
+            roles = get_roles_in_id_token(id_token, logger)
+        else:
+            roles = []
+
+        if not verify_roles(org, roles, logger):
+            logger.warning(
+                "User tried to login without authorized role assignment: %s. Valid roles are: %s",
+                profile["email"],
+                ", ".join(org.azure_roles),
+            )
+            flash(
+                "Your Azure AD account ({}) isn't allowed as you are not assigned required roles: {}.".format(profile["email"], ", ".join(org.azure_roles))
+            )
+            return redirect(url_for("redash.login", org_slug=org.slug))
+
+        if profile is None:
+            flash("Validation error. Please retry.")
+            return redirect(url_for("redash.login"))
 
         if not verify_profile(org, profile):
             logger.warning(
