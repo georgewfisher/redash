@@ -155,7 +155,8 @@ class AzureTrino(BaseQueryRunner):
             schema=self.configuration.get("schema", ""),
             auth=auth,
             http_scheme="https",
-            port=443
+            port=443,
+            user=user.name
         )
         cursor = connection.cursor()
         try:
