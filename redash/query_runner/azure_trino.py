@@ -147,7 +147,10 @@ class AzureTrino(BaseQueryRunner):
         else:
             credential = ClientSecretCredential(self.configuration.get("azure_ad_tenant_id"), self.configuration.get("azure_ad_client_id"), self.configuration.get("azure_ad_client_secret"))
         
-        queryWithUser = "/* {{\"name\":\"{name}\",\"email\":\"{email}\"}} */\n{querytext}".format(id = user.name, email = user.email, querytext = query)
+        if (user and user.name and user.email):
+            queryWithUser = "/* {{\"name\":\"{name}\",\"email\":\"{email}\"}} */\n{querytext}".format(name = user.name, email = user.email, querytext = query)
+        else:
+            queryWithUser = query
 
         token = credential.get_token(azure_trino_scope)
         auth = JWTAuthentication(token.token)
