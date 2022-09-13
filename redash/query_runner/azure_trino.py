@@ -147,6 +147,8 @@ class AzureTrino(BaseQueryRunner):
         else:
             credential = ClientSecretCredential(self.configuration.get("azure_ad_tenant_id"), self.configuration.get("azure_ad_client_id"), self.configuration.get("azure_ad_client_secret"))
         
+        queryWithUser = "/* id:{id},email:{email} */ ".format(id = user.id, email = user.email)
+
         token = credential.get_token(azure_trino_scope)
         auth = JWTAuthentication(token.token)
         connection = trino.dbapi.connect(
@@ -156,7 +158,7 @@ class AzureTrino(BaseQueryRunner):
             auth=auth,
             http_scheme="https",
             port=443,
-            user=user.name
+            user=user.id
         )
         cursor = connection.cursor()
         try:
