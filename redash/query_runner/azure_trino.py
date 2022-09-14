@@ -149,8 +149,10 @@ class AzureTrino(BaseQueryRunner):
         
         if (user and user.name and user.email):
             queryWithUser = "/* {{\"name\":\"{name}\",\"email\":\"{email}\"}} */\n{querytext}".format(name = user.name, email = user.email, querytext = query)
+            user_email = user.email
         else:
             queryWithUser = query
+            user_email = "no_user"
 
         token = credential.get_token(azure_trino_scope)
         auth = JWTAuthentication(token.token)
@@ -161,7 +163,7 @@ class AzureTrino(BaseQueryRunner):
             auth=auth,
             http_scheme="https",
             port=443,
-            user=user.email
+            user=user_email
         )
         cursor = connection.cursor()
         try:

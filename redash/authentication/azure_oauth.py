@@ -36,11 +36,11 @@ def get_roles_in_id_token(id_token, logger):
     id_token_parts = id_token.split(".")
     if len(id_token_parts) < 2:
         logger.warning("Malformed ID token")
-    decoded_token_json = json.loads(base64.b64decode(id_token_payload[1] + '=='))
+    decoded_token_json = json.loads(base64.b64decode(id_token_parts[1] + '=='))
     logger.debug("Successfully decoded token")
     if "roles" in decoded_token_json:
         roles = decoded_token_json["roles"]
-        logger.debug("Found roles: " + roles)
+        logger.debug("Found roles: " + (", ".join(roles)))
         return roles
     return []
 
@@ -142,12 +142,13 @@ def create_azure_oauth_blueprint(app):
 
         if not verify_roles(org, roles, logger):
             logger.warning(
-                "User tried to login without authorized role assignment: %s. Valid roles are: %s",
+                "User tried to login without authorized role assignment: %s. Valid roles are: %s. Provided roles are: %s",
                 profile["email"],
                 ", ".join(org.azure_roles),
+                ", ".join(roles),
             )
             flash(
-                "Your Azure AD account ({}) isn't allowed as you are not assigned required roles: {}.".format(profile["email"], ", ".join(org.azure_roles))
+                "Your Azure AD account ({}) isn't allowed as you are not assigned a required role: {}. Your assigned roles are: {}".format(profile["email"], ", ".join(org.azure_roles), ", ".join(roles))
             )
             return redirect(url_for("redash.login", org_slug=org.slug))
 
